@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:parval/screens/login_screen.dart';
+import 'package:parval/services/currerncy_service.dart';
 import '../services/plaid_service.dart';
+import 'package:intl/intl.dart';
 
 const String plaidClientId = '689d6938fc0460002328deaa';
 const String plaidSecret = '08349bbe8ac7a35f464932ccf56c2d';
@@ -20,13 +22,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final PlaidService _plaidService = PlaidService();
 
   bool _isLoading = false;
-
   List<dynamic> _data = [];
+  num? _DOP;
 
   @override
   void initState() {
     super.initState();
     unawaited(_loadData());
+    unawaited(_loadDOP());
   }
 
   Future<void> _loadData() async {
@@ -42,24 +45,95 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _loadDOP() async {
+    CurrencyService currencyService = CurrencyService();
+    var result = await currencyService.getUSDToDOP();
+    setState(() {
+      _DOP = result;
+    });
+  }
+
+  String _formatValue(num? value) {
+    String symbol = _DOP == null ? 'US' : 'RD';
+
+    num exchagevalue = _DOP ?? 1;
+
+    num newValue = value == null ? 0 : exchagevalue * value;
+
+    final formatCurrency = NumberFormat.simpleCurrency();
+
+    String result = formatCurrency.format(newValue);
+
+    return '$symbol$result';
+  }
+
+  String _accountTypeText(String value) {
+    Map<String, String> map = {
+      'depository': 'Depósito',
+      'credit': 'Crédito',
+      'investment': 'Inversiones',
+      'loan': 'Préstamo',
+    };
+
+    return map[value] ?? value;
+  }
+
+  Widget _accountTypeIcon(String value) {
+    Map<String, Widget> map = {
+      'depository': Icon(
+        Icons.account_balance_wallet,
+        color: const Color(0xfff3b90e),
+      ),
+      'credit': Icon(Icons.credit_card, color: const Color(0xfff3b90e)),
+      'investment': Icon(
+        Icons.candlestick_chart,
+        color: const Color(0xfff3b90e),
+      ),
+      'loan': Icon(Icons.payment, color: const Color(0xfff3b90e)),
+    };
+
+    return map[value] ?? Icon(Icons.credit_card);
+  }
+
   void _showAccountDetails(dynamic account) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+
         title: Text(account['name'] ?? 'Cuenta Desconocida'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tipo: ${account['type']} / ${account['subtype']}'),
-            Text('Número  de Cuenta: ${account['mask']}'),
+            Divider(),
+            SizedBox(height: 10),
             Text(
-              'Balance Disponible: \$${account['balances']['available'] ?? 'N/A'}',
+              'Tipo: ${_accountTypeText(account['type'])}',
+              style: TextStyle(fontSize: 18),
             ),
+            SizedBox(height: 10),
             Text(
-              'Balance Actual: \$${account['balances']['current'] ?? 'N/A'}',
+              'Número de cuenta: ${account['mask']}',
+              style: TextStyle(fontSize: 18),
             ),
-            Text('Limite: \$${account['balances']['limit'] ?? 'N/A'}'),
+            SizedBox(height: 10),
+            Text(
+              'Balance disponible: ${_formatValue(account['balances']['available'])}',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Balance actual: ${_formatValue(account['balances']['current'])}',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Limite: ${_formatValue(account['balances']['limit'])}',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Divider(),
           ],
         ),
         actions: [
@@ -132,13 +206,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemCount: _getTypes().length,
                 itemBuilder: (context, index) {
                   return ExpansionTile(
-                    title: Text('Tipo: ${_getTypes()[index]}'),
+                    leading: _accountTypeIcon(_getTypes()[index]),
+                    title: Text(
+                      _accountTypeText(_getTypes()[index]),
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     children: _getAccountsByType(_getTypes()[index])
                         .map(
                           (account) => ListTile(
-                            title: Text('Nonbre: ${account['name']}'),
+                            title: Text(
+                              'Nombre: ${account['name']}',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             subtitle: Text(
-                              'Disponible: \$${account['balances']['available'] ?? 'N/A'}',
+                              'Disponible: ${_formatValue(account['balances']['available'])}',
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             onTap: () => _showAccountDetails(account),
                           ),

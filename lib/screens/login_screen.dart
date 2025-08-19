@@ -172,10 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   );
                 },
-                child: Text(
-                  'Registrarme',
-                  style: TextStyle(color: Colors.white, fontSize: 20),
-                ),
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xff6c757d),
                   // primary: Colors.blueAccent,
@@ -183,6 +180,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                ),
+                child: Text(
+                  'Registrarme',
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
               ),
             ),
